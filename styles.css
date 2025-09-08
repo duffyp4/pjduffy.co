@@ -137,6 +137,11 @@ header#main-header h1 {
     border-right: 2px solid #808080;
 }
 
+/* Narrower sidebar for blog posts to give more space to content */
+.blog-post-container .sidebar {
+    width: 160px;
+}
+
 .sidebar-section {
     margin-bottom: 20px;
 }
@@ -279,15 +284,15 @@ main {
         -3px -3px 0 rgba(0,0,0,0.3) inset;
 }
 
-/* Wider page container for blog posts */
-#page-container.blog-post-container {
-    width: 840px; /* 20% wider than the standard 700px */
+/* Wider main content for blog posts with better margins */
+main.blog-post {
+    margin: 15px 15px 15px 10px; /* Reduce left margin since sidebar is narrower */
+    padding: 30px; /* More padding for better reading */
 }
 
-/* Wider main content for blog posts */
-main.blog-post {
-    flex: 1.2;
-    max-width: none;
+/* Wider page container for blog posts */
+#page-container.blog-post-container {
+    width: 900px; /* Significantly wider than the standard 700px */
 }
 
 .page-title {
