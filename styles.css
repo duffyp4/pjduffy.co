@@ -279,6 +279,11 @@ main {
         -3px -3px 0 rgba(0,0,0,0.3) inset;
 }
 
+/* Wider page container for blog posts */
+.blog-post-container {
+    width: 840px; /* 20% wider than the standard 700px */
+}
+
 /* Wider main content for blog posts */
 main.blog-post {
     flex: 1.2;
