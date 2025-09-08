@@ -280,7 +280,7 @@ main {
 }
 
 /* Wider page container for blog posts */
-.blog-post-container {
+#page-container.blog-post-container {
     width: 840px; /* 20% wider than the standard 700px */
 }
 
