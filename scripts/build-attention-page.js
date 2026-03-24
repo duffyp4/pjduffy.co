@@ -160,39 +160,19 @@ function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function generateBookmarkCard(item) {
-  return `
-                    <div class="attention-card" data-type="bookmark" data-date="${escapeHtml(item.date)}">
-                        ${item.embedHtml}
-                    </div>`;
-}
-
-function generateArticleCard(item) {
-  const ogImage = item.ogImage
-    ? `<div class="og-image"><img src="${escapeHtml(item.ogImage)}" alt="" loading="lazy"></div>`
-    : '';
-
-  return `
-                    <div class="attention-card" data-type="article" data-date="${escapeHtml(item.date)}">
-                        <a href="${escapeHtml(item.url)}" target="_blank" class="article-card">
-                            ${ogImage}
-                            <div class="article-card-body">
-                                <div class="article-card-title">${escapeHtml(item.title)}</div>
-                                ${item.ogDescription ? `<div class="article-card-desc">${escapeHtml(item.ogDescription)}</div>` : ''}
-                                <div class="article-card-meta">
-                                    ${item.author ? escapeHtml(item.author) + ' &middot; ' : ''}${escapeHtml(item.siteName || new URL(item.url).hostname)}
-                                </div>
-                            </div>
-                        </a>
-                    </div>`;
-}
-
 function generatePage(items) {
-  const cards = items.map(item => {
-    if (item.type === 'bookmark') return generateBookmarkCard(item);
-    if (item.type === 'article') return generateArticleCard(item);
-    return '';
-  }).join('\n');
+  // Serialize items as JSON for client-side rendering (only needed fields)
+  const itemsJson = JSON.stringify(items.map(item => ({
+    type: item.type,
+    date: item.date,
+    url: item.url,
+    embedHtml: item.embedHtml || '',
+    title: item.title || '',
+    author: item.author || '',
+    siteName: item.siteName || '',
+    ogImage: item.ogImage || '',
+    ogDescription: item.ogDescription || '',
+  })));
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -202,238 +182,130 @@ function generatePage(items) {
     <title>PJ Duffy's Home Page - Radar</title>
     <link rel="stylesheet" href="styles.css">
     <style>
-        .filter-bar {
-            padding: 10px 15px;
-            background: #CCCCCC;
-            border-bottom: 2px solid #999;
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-        .filter-btn {
-            padding: 4px 12px;
-            background: #DDDDDD;
-            border: 2px outset #EEEEEE;
-            font-size: 13px;
-            font-family: 'Apple Garamond', Georgia, serif;
-            cursor: pointer;
-            color: #000;
-            text-decoration: none;
-        }
-        .filter-btn:hover {
-            background: #C8C8C8;
-        }
-        .filter-btn.active {
-            background: #333;
-            color: white;
-            border: 2px inset #666;
-        }
-        .attention-feed {
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .attention-card {
-            background: white;
-        }
-        .article-card {
-            display: block;
-            border: 1px solid #ccc;
-            overflow: hidden;
-            text-decoration: none;
-            color: inherit;
-            box-shadow: 1px 1px 0 #999;
-        }
-        .article-card:hover {
-            box-shadow: 2px 2px 0 #666;
-        }
-        .og-image img {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            display: block;
-        }
-        .article-card-body {
-            padding: 10px 12px;
-        }
-        .article-card-title {
-            font-size: 15px;
-            font-weight: bold;
-            color: #000;
-            margin-bottom: 4px;
-        }
-        .article-card-desc {
-            font-size: 13px;
-            color: #444;
-            line-height: 1.4;
-            margin-bottom: 6px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .article-card-meta {
-            font-size: 12px;
-            color: #888;
-        }
-        .date-separator {
-            font-size: 11px;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            padding-bottom: 4px;
-            border-bottom: 1px solid #ccc;
-            font-family: 'Apple Garamond', Georgia, serif;
-        }
-        .pagination {
-            padding: 12px 15px;
-            background: #CCCCCC;
-            border-top: 2px solid #999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 6px;
-            font-family: 'Apple Garamond', Georgia, serif;
-            font-size: 13px;
-        }
-        .page-btn {
-            padding: 3px 10px;
-            background: #DDDDDD;
-            border: 2px outset #EEEEEE;
-            font-size: 12px;
-            cursor: pointer;
-            font-family: 'Apple Garamond', Georgia, serif;
-        }
-        .page-btn.active {
-            background: #333;
-            color: white;
-            border: 2px inset #666;
-        }
-        .page-info {
-            color: #444;
-        }
-        .hidden { display: none !important; }
+        .filter-bar { padding: 10px 15px; background: #CCCCCC; border-bottom: 2px solid #999; display: flex; gap: 6px; flex-wrap: wrap; }
+        .filter-btn { padding: 4px 12px; background: #DDDDDD; border: 2px outset #EEEEEE; font-size: 13px; font-family: 'Apple Garamond', Georgia, serif; cursor: pointer; color: #000; }
+        .filter-btn:hover { background: #C8C8C8; }
+        .filter-btn.active { background: #333; color: white; border: 2px inset #666; }
+        .attention-feed { padding: 15px; display: flex; flex-direction: column; gap: 15px; }
+        .article-card { display: block; border: 1px solid #ccc; overflow: hidden; text-decoration: none; color: inherit; box-shadow: 1px 1px 0 #999; }
+        .article-card:hover { box-shadow: 2px 2px 0 #666; }
+        .og-image img { width: 100%; height: 180px; object-fit: cover; display: block; }
+        .article-card-body { padding: 10px 12px; }
+        .article-card-title { font-size: 15px; font-weight: bold; color: #000; margin-bottom: 4px; }
+        .article-card-desc { font-size: 13px; color: #444; line-height: 1.4; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .article-card-meta { font-size: 12px; color: #888; }
+        .pagination { padding: 12px 15px; background: #CCCCCC; border-top: 2px solid #999; display: flex; justify-content: center; align-items: center; gap: 6px; font-family: 'Apple Garamond', Georgia, serif; font-size: 13px; }
+        .page-btn { padding: 3px 10px; background: #DDDDDD; border: 2px outset #EEEEEE; font-size: 12px; cursor: pointer; font-family: 'Apple Garamond', Georgia, serif; }
+        .page-btn.active { background: #333; color: white; border: 2px inset #666; }
+        .page-info { color: #444; }
     </style>
 </head>
 <body>
     <div id="page-container">
         <header id="main-header">
-            <div class="logo-area">
-                <img src="images/logo.png" alt="PJ Duffy Logo">
-            </div>
-            <div class="title-area">
-                <h1>PJ Duffy's Home on the World Wide Web</h1>
-            </div>
+            <div class="logo-area"><img src="images/logo.png" alt="PJ Duffy Logo"></div>
+            <div class="title-area"><h1>PJ Duffy's Home on the World Wide Web</h1></div>
         </header>
-
         <div class="content-wrapper">
             <aside class="sidebar">
                 <div class="sidebar-section main-nav">
-                    <nav>
-                        <ul>
-                            <li><a href="/">Home</a></li>
-                            <li><a href="/photos">Photos</a></li>
-                            <li><a href="/quotes">Cool Quotes</a></li>
-                            <li><a href="/reading-list">Books</a></li>
-                            <li><a href="/thoughts">Thoughts</a></li>
-                            <li><a href="/radar" class="active">Radar</a></li>
-                        </ul>
-                    </nav>
+                    <nav><ul>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="/photos">Photos</a></li>
+                        <li><a href="/quotes">Cool Quotes</a></li>
+                        <li><a href="/reading-list">Books</a></li>
+                        <li><a href="/thoughts">Thoughts</a></li>
+                        <li><a href="/radar" class="active">Radar</a></li>
+                    </ul></nav>
                 </div>
             </aside>
-
             <main>
                 <h2 class="page-title">Radar</h2>
-
                 <div class="filter-bar">
                     <button class="filter-btn active" data-filter="all">All</button>
                     <button class="filter-btn" data-filter="article">Articles</button>
                     <button class="filter-btn" data-filter="bookmark">X Bookmarks</button>
                 </div>
-
-                <div class="attention-feed" id="attention-feed">
-${cards}
-                </div>
-
+                <div class="attention-feed" id="feed"></div>
                 <div class="pagination" id="pagination"></div>
             </main>
         </div>
-
         <div class="button-bar">
             <a href="https://letshum.com" target="_blank">PJ's Internet Services</a>
             <a href="mailto:pj.duffy4@gmail.com">Contact Me</a>
         </div>
-
-        <footer id="main-footer">
-            <p>&copy; 1994-2026 PJ Duffy - Best viewed with Netscape Navigator 4.0</p>
-        </footer>
+        <footer id="main-footer"><p>&copy; 1994-2026 PJ Duffy - Best viewed with Netscape Navigator 4.0</p></footer>
     </div>
-
-    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+    <script>var RADAR_DATA = \${itemsJson};</script>
     <script>
     (function() {
-        var ITEMS_PER_PAGE = ${ITEMS_PER_PAGE};
-        var cards = Array.from(document.querySelectorAll('.attention-card'));
-        var filterBtns = document.querySelectorAll('.filter-btn');
-        var pagination = document.getElementById('pagination');
-        var currentFilter = 'all';
-        var currentPage = 1;
+        var PER_PAGE = \${ITEMS_PER_PAGE};
+        var items = RADAR_DATA;
+        var feed = document.getElementById('feed');
+        var pag = document.getElementById('pagination');
+        var filter = 'all', page = 1;
 
-        function getFiltered() {
-            if (currentFilter === 'all') return cards;
-            return cards.filter(function(c) { return c.dataset.type === currentFilter; });
+        function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        function filtered() {
+            return filter === 'all' ? items : items.filter(function(i) { return i.type === filter; });
+        }
+
+        function cardHtml(item) {
+            if (item.type === 'bookmark') return item.embedHtml;
+            var img = item.ogImage ? '<div class="og-image"><img src="' + esc(item.ogImage) + '" alt="" loading="lazy"></div>' : '';
+            var desc = item.ogDescription ? '<div class="article-card-desc">' + esc(item.ogDescription) + '</div>' : '';
+            var host = ''; try { host = new URL(item.url).hostname; } catch(e) {}
+            var meta = (item.author ? esc(item.author) + ' \\u00b7 ' : '') + esc(item.siteName || host);
+            return '<a href="' + esc(item.url) + '" target="_blank" class="article-card">' + img +
+                '<div class="article-card-body"><div class="article-card-title">' + esc(item.title) + '</div>' +
+                desc + '<div class="article-card-meta">' + meta + '</div></div></a>';
         }
 
         function render() {
-            var filtered = getFiltered();
-            var totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-            if (currentPage > totalPages) currentPage = totalPages;
+            var f = filtered();
+            var pages = Math.max(1, Math.ceil(f.length / PER_PAGE));
+            if (page > pages) page = pages;
+            var slice = f.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-            var start = (currentPage - 1) * ITEMS_PER_PAGE;
-            var end = start + ITEMS_PER_PAGE;
+            while (feed.firstChild) feed.removeChild(feed.firstChild);
+            slice.forEach(function(item) {
+                var div = document.createElement('div');
+                div.innerHTML = cardHtml(item);
+                while (div.firstChild) feed.appendChild(div.firstChild);
+            });
 
-            cards.forEach(function(c) { c.classList.add('hidden'); });
-            filtered.slice(start, end).forEach(function(c) { c.classList.remove('hidden'); });
-
-            while (pagination.firstChild) pagination.removeChild(pagination.firstChild);
-            if (totalPages > 1) {
-                var prevBtn = document.createElement('button');
-                prevBtn.className = 'page-btn';
-                prevBtn.textContent = '\u2190 Prev';
-                prevBtn.disabled = currentPage === 1;
-                prevBtn.onclick = function() { if (currentPage > 1) { currentPage--; render(); window.scrollTo(0, 0); } };
-                pagination.appendChild(prevBtn);
-
+            while (pag.firstChild) pag.removeChild(pag.firstChild);
+            if (pages > 1) {
+                var prev = document.createElement('button');
+                prev.className = 'page-btn'; prev.textContent = '\\u2190 Prev'; prev.disabled = page === 1;
+                prev.onclick = function() { page--; render(); window.scrollTo(0,0); };
+                pag.appendChild(prev);
                 var info = document.createElement('span');
-                info.className = 'page-info';
-                info.textContent = 'Page ' + currentPage + ' of ' + totalPages;
-                pagination.appendChild(info);
-
-                var nextBtn = document.createElement('button');
-                nextBtn.className = 'page-btn';
-                nextBtn.textContent = 'Next \u2192';
-                nextBtn.disabled = currentPage === totalPages;
-                nextBtn.onclick = function() { if (currentPage < totalPages) { currentPage++; render(); window.scrollTo(0, 0); } };
-                pagination.appendChild(nextBtn);
+                info.className = 'page-info'; info.textContent = 'Page ' + page + ' of ' + pages;
+                pag.appendChild(info);
+                var next = document.createElement('button');
+                next.className = 'page-btn'; next.textContent = 'Next \\u2192'; next.disabled = page === pages;
+                next.onclick = function() { page++; render(); window.scrollTo(0,0); };
+                pag.appendChild(next);
             }
 
-            if (window.twttr && window.twttr.widgets) {
-                window.twttr.widgets.load();
-            }
+            if (window.twttr && window.twttr.widgets) window.twttr.widgets.load(feed);
         }
 
-        filterBtns.forEach(function(btn) {
+        document.querySelectorAll('.filter-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                filterBtns.forEach(function(b) { b.classList.remove('active'); });
+                document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
                 btn.classList.add('active');
-                currentFilter = btn.dataset.filter;
-                currentPage = 1;
-                render();
+                filter = btn.dataset.filter; page = 1; render();
             });
         });
 
         render();
+        var s = document.createElement('script');
+        s.src = 'https://platform.twitter.com/widgets.js'; s.async = true;
+        s.onload = function() { if (window.twttr) window.twttr.widgets.load(feed); };
+        document.body.appendChild(s);
     })();
     </script>
 </body>
@@ -451,15 +323,12 @@ async function main() {
   const articles = await fetchArticles();
   console.log('  ' + articles.length + ' articles');
 
-  // Sync articles to Google Sheet
   console.log('Syncing articles to Google Sheet...');
   await syncArticlesToSheet(articles);
 
-  // Merge and sort by date descending
   var allItems = [...bookmarks, ...articles].sort(function(a, b) { return b.date.localeCompare(a.date); });
   console.log('Total items: ' + allItems.length);
 
-  // Fetch OG metadata for articles
   console.log('Fetching OpenGraph metadata for articles...');
   for (const item of allItems) {
     if (item.type === 'article' && item.url) {
@@ -471,8 +340,7 @@ async function main() {
     }
   }
 
-  // Generate HTML
-  console.log('Generating attention.html...');
+  console.log('Generating radar.html...');
   const html = generatePage(allItems);
   writeFileSync(OUTPUT_PATH, html);
   console.log('Written to ' + OUTPUT_PATH + ' (' + allItems.length + ' items)');
