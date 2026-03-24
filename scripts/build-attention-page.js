@@ -332,12 +332,12 @@ function generatePage(items) {
                 <div class="sidebar-section main-nav">
                     <nav>
                         <ul>
-                            <li><a href="index.html">Home</a></li>
-                            <li><a href="photos.html">Photos</a></li>
-                            <li><a href="quotes.html">Cool Quotes</a></li>
-                            <li><a href="reading-list.html">Books</a></li>
-                            <li><a href="thoughts.html">Thoughts</a></li>
-                            <li><a href="radar.html" class="active">Radar</a></li>
+                            <li><a href="/">Home</a></li>
+                            <li><a href="/photos">Photos</a></li>
+                            <li><a href="/quotes">Cool Quotes</a></li>
+                            <li><a href="/reading-list">Books</a></li>
+                            <li><a href="/thoughts">Thoughts</a></li>
+                            <li><a href="/radar" class="active">Radar</a></li>
                         </ul>
                     </nav>
                 </div>
