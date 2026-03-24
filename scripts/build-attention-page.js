@@ -325,6 +325,8 @@ function generatePage(items) {
         function loadTweet(holder) {
             var id = holder.getAttribute('data-tweet-id');
             if (id && window.twttr && window.twttr.widgets && !holder.querySelector('iframe')) {
+                holder.textContent = '';
+                holder.className = '';
                 window.twttr.widgets.createTweet(id, holder);
             }
         }
