@@ -75,15 +75,33 @@
             return filter === 'all' ? items : items.filter(function(i) { return i.type === filter; });
         }
 
-        function cardHtml(item) {
-            if (item.type === 'bookmark') return item.embedHtml;
-            var img = item.ogImage ? '<div class="og-image"><img src="' + esc(item.ogImage) + '" alt="" loading="lazy"></div>' : '';
-            var desc = item.ogDescription ? '<div class="article-card-desc">' + esc(item.ogDescription) + '</div>' : '';
+        function getTweetId(url) {
+            var m = url.match(/status/(d+)/);
+            return m ? m[1] : null;
+        }
+
+        // Article cards use DOM construction (safe - all values are escaped via esc())
+        function renderArticleCard(item, container) {
+            var a = document.createElement('a');
+            a.href = item.url; a.target = '_blank'; a.className = 'article-card';
+            if (item.ogImage) {
+                var imgDiv = document.createElement('div'); imgDiv.className = 'og-image';
+                var img = document.createElement('img'); img.src = item.ogImage; img.alt = ''; img.loading = 'lazy';
+                imgDiv.appendChild(img); a.appendChild(imgDiv);
+            }
+            var body = document.createElement('div'); body.className = 'article-card-body';
+            var title = document.createElement('div'); title.className = 'article-card-title'; title.textContent = item.title;
+            body.appendChild(title);
+            if (item.ogDescription) {
+                var desc = document.createElement('div'); desc.className = 'article-card-desc'; desc.textContent = item.ogDescription;
+                body.appendChild(desc);
+            }
+            var meta = document.createElement('div'); meta.className = 'article-card-meta';
             var host = ''; try { host = new URL(item.url).hostname; } catch(e) {}
-            var meta = (item.author ? esc(item.author) + ' · ' : '') + esc(item.siteName || host);
-            return '<a href="' + esc(item.url) + '" target="_blank" class="article-card">' + img +
-                '<div class="article-card-body"><div class="article-card-title">' + esc(item.title) + '</div>' +
-                desc + '<div class="article-card-meta">' + meta + '</div></div></a>';
+            meta.textContent = (item.author ? item.author + ' · ' : '') + (item.siteName || host);
+            body.appendChild(meta);
+            a.appendChild(body);
+            container.appendChild(a);
         }
 
         function render() {
@@ -93,10 +111,18 @@
             var slice = f.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
             while (feed.firstChild) feed.removeChild(feed.firstChild);
+
             slice.forEach(function(item) {
-                var div = document.createElement('div');
-                div.innerHTML = cardHtml(item);
-                while (div.firstChild) feed.appendChild(div.firstChild);
+                if (item.type === 'bookmark') {
+                    var tweetId = getTweetId(item.url);
+                    if (tweetId && window.twttr && window.twttr.widgets) {
+                        var holder = document.createElement('div');
+                        feed.appendChild(holder);
+                        window.twttr.widgets.createTweet(tweetId, holder);
+                    }
+                } else {
+                    renderArticleCard(item, feed);
+                }
             });
 
             while (pag.firstChild) pag.removeChild(pag.firstChild);
@@ -113,8 +139,6 @@
                 next.onclick = function() { page++; render(); window.scrollTo(0,0); };
                 pag.appendChild(next);
             }
-
-            if (window.twttr && window.twttr.widgets) window.twttr.widgets.load(feed);
         }
 
         document.querySelectorAll('.filter-btn').forEach(function(btn) {
