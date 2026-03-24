@@ -236,10 +236,10 @@ function generatePage(items) {
         </div>
         <footer id="main-footer"><p>&copy; 1994-2026 PJ Duffy - Best viewed with Netscape Navigator 4.0</p></footer>
     </div>
-    <script>var RADAR_DATA = \${itemsJson};</script>
+    <script>var RADAR_DATA = ${itemsJson};</script>
     <script>
     (function() {
-        var PER_PAGE = \${ITEMS_PER_PAGE};
+        var PER_PAGE = ${ITEMS_PER_PAGE};
         var items = RADAR_DATA;
         var feed = document.getElementById('feed');
         var pag = document.getElementById('pagination');
@@ -256,7 +256,7 @@ function generatePage(items) {
             var img = item.ogImage ? '<div class="og-image"><img src="' + esc(item.ogImage) + '" alt="" loading="lazy"></div>' : '';
             var desc = item.ogDescription ? '<div class="article-card-desc">' + esc(item.ogDescription) + '</div>' : '';
             var host = ''; try { host = new URL(item.url).hostname; } catch(e) {}
-            var meta = (item.author ? esc(item.author) + ' \\u00b7 ' : '') + esc(item.siteName || host);
+            var meta = (item.author ? esc(item.author) + ' \u00b7 ' : '') + esc(item.siteName || host);
             return '<a href="' + esc(item.url) + '" target="_blank" class="article-card">' + img +
                 '<div class="article-card-body"><div class="article-card-title">' + esc(item.title) + '</div>' +
                 desc + '<div class="article-card-meta">' + meta + '</div></div></a>';
@@ -278,14 +278,14 @@ function generatePage(items) {
             while (pag.firstChild) pag.removeChild(pag.firstChild);
             if (pages > 1) {
                 var prev = document.createElement('button');
-                prev.className = 'page-btn'; prev.textContent = '\\u2190 Prev'; prev.disabled = page === 1;
+                prev.className = 'page-btn'; prev.textContent = '\u2190 Prev'; prev.disabled = page === 1;
                 prev.onclick = function() { page--; render(); window.scrollTo(0,0); };
                 pag.appendChild(prev);
                 var info = document.createElement('span');
                 info.className = 'page-info'; info.textContent = 'Page ' + page + ' of ' + pages;
                 pag.appendChild(info);
                 var next = document.createElement('button');
-                next.className = 'page-btn'; next.textContent = 'Next \\u2192'; next.disabled = page === pages;
+                next.className = 'page-btn'; next.textContent = 'Next \u2192'; next.disabled = page === pages;
                 next.onclick = function() { page++; render(); window.scrollTo(0,0); };
                 pag.appendChild(next);
             }
