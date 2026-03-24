@@ -125,11 +125,49 @@ async function fetchArticles() {
   }));
 }
 
+// --- Archive URL resolution ---
+
+function isArchiveUrl(url) {
+  return /^https?:\/\/(archive\.(is|org|ph|today|li|vn|fo|md)|web\.archive\.org)/.test(url);
+}
+
+async function resolveArchiveUrl(url) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AttentionPageBot/1.0)' },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    // archive.is embeds the original URL in the favicon link's domain param
+    const faviconMatch = html.match(/google\.com\/s2\/favicons\?domain=([^"&]+)/);
+    if (faviconMatch) {
+      // Find the actual full URL from the page content
+      const domain = faviconMatch[1];
+      const fullUrlMatch = html.match(new RegExp('https?://' + domain.replace(/\./g, '\\.') + '/[^"\'\\s<]+'));
+      if (fullUrlMatch) return fullUrlMatch[0];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // --- OpenGraph fetching for articles ---
 
 async function fetchOgMetadata(articleUrl) {
   try {
-    const res = await fetch(articleUrl, {
+    var fetchUrl = articleUrl;
+    if (isArchiveUrl(articleUrl)) {
+      var original = await resolveArchiveUrl(articleUrl);
+      if (original) {
+        console.log('  Resolved archive URL: ' + articleUrl + ' -> ' + original);
+        fetchUrl = original;
+      }
+    }
+
+    const res = await fetch(fetchUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AttentionPageBot/1.0)' },
       redirect: 'follow',
       signal: AbortSignal.timeout(10000),
@@ -143,7 +181,6 @@ async function fetchOgMetadata(articleUrl) {
     while ((match = metaRegex.exec(html)) !== null) {
       og[match[1]] = match[2];
     }
-    // Also try reversed attribute order
     const metaRegex2 = /<meta\s+content=["']([^"']*)["']\s+(?:property|name)=["']og:(\w+)["']/gi;
     while ((match = metaRegex2.exec(html)) !== null) {
       og[match[2]] = match[1];
@@ -374,7 +411,8 @@ async function main() {
       item.ogImage = og.image || '';
       item.ogDescription = og.description || '';
       if (!item.title && og.title) item.title = og.title;
-      if (!item.siteName && og.site_name) item.siteName = og.site_name;
+      if (og.site_name && (!item.siteName || isArchiveUrl(item.url))) item.siteName = og.site_name;
+      if (og.author && (!item.author || isArchiveUrl(item.url))) item.author = og.author;
     }
   }
 
