@@ -103,12 +103,56 @@ async function fetchXBookmarks() {
   if (!res.ok) throw new Error(`Sheets API error: ${res.status} ${await res.text()}`);
   const data = await res.json();
   const rows = (data.values || []).slice(1); // skip header
-  return rows.map(([date, postLink, embedHtml]) => ({
+  return rows.map(([date, postLink]) => ({
     type: 'bookmark',
     date: date || '',
     url: postLink || '',
-    embedHtml: embedHtml || '',
+    tweetText: '',
+    tweetAuthor: '',
+    tweetAuthorHandle: '',
   }));
+}
+
+async function fetchOembedData(tweetUrl) {
+  try {
+    const res = await fetch(
+      `https://publish.twitter.com/oembed?url=${encodeURIComponent(tweetUrl)}&omit_script=true&dnt=true`,
+      { signal: AbortSignal.timeout(10000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    // Extract text from the blockquote HTML
+    const textMatch = data.html.match(/<p[^>]*>(.*?)<\/p>/s);
+    const text = textMatch ? textMatch[1].replace(/<[^>]+>/g, '').replace(/&mdash;.*$/, '').trim() : '';
+    return {
+      text,
+      authorName: data.author_name || '',
+      authorHandle: data.author_url ? data.author_url.split('/').pop() : '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function enrichBookmarksWithOembed(bookmarks) {
+  console.log('Fetching oEmbed data for ' + bookmarks.length + ' tweets...');
+  let fetched = 0;
+  // Process in batches of 10 to avoid hammering the API
+  for (let i = 0; i < bookmarks.length; i += 10) {
+    const batch = bookmarks.slice(i, i + 10);
+    const results = await Promise.all(batch.map(b => fetchOembedData(b.url)));
+    results.forEach((data, j) => {
+      if (data) {
+        bookmarks[i + j].tweetText = data.text;
+        bookmarks[i + j].tweetAuthor = data.authorName;
+        bookmarks[i + j].tweetAuthorHandle = data.authorHandle;
+        fetched++;
+      }
+    });
+    if (i % 100 === 0 && i > 0) console.log('  ' + i + '/' + bookmarks.length + ' processed...');
+  }
+  console.log('  Fetched oEmbed for ' + fetched + '/' + bookmarks.length + ' tweets');
+  return bookmarks;
 }
 
 async function fetchArticles() {
@@ -200,7 +244,6 @@ function escapeHtml(str) {
 function generatePage(items) {
   // Serialize items as JSON for client-side rendering (only needed fields)
   // No embedHtml in JSON — it contains HTML that breaks script tags.
-  // Bookmarks only need the URL (tweet ID is extracted client-side).
   const itemsJson = JSON.stringify(items.map(item => ({
     type: item.type,
     date: item.date,
@@ -210,6 +253,9 @@ function generatePage(items) {
     siteName: item.siteName || '',
     ogImage: item.ogImage || '',
     ogDescription: item.ogDescription || '',
+    tweetText: item.tweetText || '',
+    tweetAuthor: item.tweetAuthor || '',
+    tweetAuthorHandle: item.tweetAuthorHandle || '',
   })));
 
   return `<!DOCTYPE html>
@@ -237,6 +283,13 @@ function generatePage(items) {
         .page-btn { padding: 3px 10px; background: #DDDDDD; border: 2px outset #EEEEEE; font-size: 12px; cursor: pointer; font-family: 'Apple Garamond', Georgia, serif; }
         .page-btn.active { background: #333; color: white; border: 2px inset #666; }
         .page-info { color: #444; }
+        .tweet-card { display: block; border: 1px solid #e1e8ed; border-radius: 12px; padding: 16px; text-decoration: none; color: inherit; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: white; }
+        .tweet-card:hover { background: #f8f9fa; }
+        .tweet-author { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .tweet-author-name { font-size: 14px; font-weight: bold; color: #0f1419; }
+        .tweet-author-handle { font-size: 13px; color: #536471; }
+        .tweet-text { font-size: 15px; color: #0f1419; line-height: 1.4; margin-bottom: 8px; }
+        .tweet-date { font-size: 13px; color: #536471; }
     </style>
 </head>
 <body>
@@ -284,18 +337,31 @@ function generatePage(items) {
         var pag = document.getElementById('pagination');
         var filter = 'all', page = 1;
 
-        function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
         function filtered() {
             return filter === 'all' ? items : items.filter(function(i) { return i.type === filter; });
         }
 
-        function getTweetId(url) {
-            var m = url.match(/status\\/(\\d+)/);
-            return m ? m[1] : null;
+        function renderTweetCard(item, container) {
+            var a = document.createElement('a');
+            a.href = item.url; a.target = '_blank'; a.className = 'tweet-card';
+            var authorDiv = document.createElement('div'); authorDiv.className = 'tweet-author';
+            var name = document.createElement('span'); name.className = 'tweet-author-name';
+            name.textContent = item.tweetAuthor || 'Unknown';
+            var handle = document.createElement('span'); handle.className = 'tweet-author-handle';
+            handle.textContent = item.tweetAuthorHandle ? '@' + item.tweetAuthorHandle : '';
+            authorDiv.appendChild(name); authorDiv.appendChild(handle);
+            a.appendChild(authorDiv);
+            if (item.tweetText) {
+                var text = document.createElement('div'); text.className = 'tweet-text';
+                text.textContent = item.tweetText;
+                a.appendChild(text);
+            }
+            var date = document.createElement('div'); date.className = 'tweet-date';
+            date.textContent = item.date;
+            a.appendChild(date);
+            container.appendChild(a);
         }
 
-        // Article cards use DOM construction (safe - all values are escaped via esc())
         function renderArticleCard(item, container) {
             var a = document.createElement('a');
             a.href = item.url; a.target = '_blank'; a.className = 'article-card';
@@ -329,15 +395,7 @@ function generatePage(items) {
 
             slice.forEach(function(item) {
                 if (item.type === 'bookmark') {
-                    var tweetId = getTweetId(item.url);
-                    if (tweetId) {
-                        var holder = document.createElement('div');
-                        holder.setAttribute('data-tweet-id', tweetId);
-                        feed.appendChild(holder);
-                        if (window.twttr && window.twttr.widgets) {
-                            window.twttr.widgets.createTweet(tweetId, holder);
-                        }
-                    }
+                    renderTweetCard(item, feed);
                 } else {
                     renderArticleCard(item, feed);
                 }
@@ -368,17 +426,6 @@ function generatePage(items) {
         });
 
         render();
-        var s = document.createElement('script');
-        s.src = 'https://platform.twitter.com/widgets.js'; s.async = true;
-        s.onload = function() {
-            if (!window.twttr || !window.twttr.widgets) return;
-            var holders = feed.querySelectorAll('[data-tweet-id]');
-            holders.forEach(function(holder) {
-                var id = holder.getAttribute('data-tweet-id');
-                if (id && !holder.querySelector('iframe')) {
-                    window.twttr.widgets.createTweet(id, holder);
-                }
-            });
         };
         document.body.appendChild(s);
     })();
@@ -391,8 +438,11 @@ function generatePage(items) {
 
 async function main() {
   console.log('Fetching X bookmarks from Google Sheet...');
-  const bookmarks = await fetchXBookmarks();
+  var bookmarks = await fetchXBookmarks();
   console.log('  ' + bookmarks.length + ' bookmarks');
+
+  // Enrich bookmarks with tweet text via oEmbed
+  bookmarks = await enrichBookmarksWithOembed(bookmarks);
 
   console.log('Fetching articles from Kindle worker...');
   const articles = await fetchArticles();
