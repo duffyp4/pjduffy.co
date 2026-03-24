@@ -115,10 +115,13 @@
             slice.forEach(function(item) {
                 if (item.type === 'bookmark') {
                     var tweetId = getTweetId(item.url);
-                    if (tweetId && window.twttr && window.twttr.widgets) {
+                    if (tweetId) {
                         var holder = document.createElement('div');
+                        holder.setAttribute('data-tweet-id', tweetId);
                         feed.appendChild(holder);
-                        window.twttr.widgets.createTweet(tweetId, holder);
+                        if (window.twttr && window.twttr.widgets) {
+                            window.twttr.widgets.createTweet(tweetId, holder);
+                        }
                     }
                 } else {
                     renderArticleCard(item, feed);
@@ -152,7 +155,16 @@
         render();
         var s = document.createElement('script');
         s.src = 'https://platform.twitter.com/widgets.js'; s.async = true;
-        s.onload = function() { if (window.twttr) window.twttr.widgets.load(feed); };
+        s.onload = function() {
+            if (!window.twttr || !window.twttr.widgets) return;
+            var holders = feed.querySelectorAll('[data-tweet-id]');
+            holders.forEach(function(holder) {
+                var id = holder.getAttribute('data-tweet-id');
+                if (id && !holder.querySelector('iframe')) {
+                    window.twttr.widgets.createTweet(id, holder);
+                }
+            });
+        };
         document.body.appendChild(s);
     })();
     </script>
