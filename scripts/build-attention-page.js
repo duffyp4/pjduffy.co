@@ -426,8 +426,6 @@ function generatePage(items) {
         });
 
         render();
-        };
-        document.body.appendChild(s);
     })();
     </script>
 </body>
