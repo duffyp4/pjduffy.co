@@ -355,7 +355,7 @@ function generatePage(items) {
                         var holder = document.createElement('div');
                         holder.setAttribute('data-tweet-id', tweetId);
                         holder.className = 'tweet-loading';
-                        holder.textContent = 'Loading tweet\u2026';
+                        holder.textContent = 'Loading X post\u2026';
                         feed.appendChild(holder);
                         observer.observe(holder);
                     }
