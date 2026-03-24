@@ -162,11 +162,12 @@ function escapeHtml(str) {
 
 function generatePage(items) {
   // Serialize items as JSON for client-side rendering (only needed fields)
+  // No embedHtml in JSON — it contains HTML that breaks script tags.
+  // Bookmarks only need the URL (tweet ID is extracted client-side).
   const itemsJson = JSON.stringify(items.map(item => ({
     type: item.type,
     date: item.date,
     url: item.url,
-    embedHtml: item.embedHtml || '',
     title: item.title || '',
     author: item.author || '',
     siteName: item.siteName || '',
@@ -180,6 +181,7 @@ function generatePage(items) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PJ Duffy's Home Page - Radar</title>
+    <link rel="icon" type="image/png" href="/images/logo.png">
     <link rel="stylesheet" href="styles.css">
     <style>
         .filter-bar { padding: 10px 15px; background: #CCCCCC; border-bottom: 2px solid #999; display: flex; gap: 6px; flex-wrap: wrap; }
