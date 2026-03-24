@@ -222,7 +222,7 @@ function generatePage(items) {
                 </div>
             </aside>
             <main>
-                <h2 class="page-title">Radar</h2>
+                <h2 class="page-title">What's On My Radar</h2>
                 <div class="filter-bar">
                     <button class="filter-btn active" data-filter="all">All</button>
                     <button class="filter-btn" data-filter="article">Articles</button>
@@ -254,7 +254,7 @@ function generatePage(items) {
         }
 
         function getTweetId(url) {
-            var m = url.match(/status\/(\d+)/);
+            var m = url.match(/status\\/(\\d+)/);
             return m ? m[1] : null;
         }
 
