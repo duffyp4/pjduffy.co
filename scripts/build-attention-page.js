@@ -278,7 +278,7 @@ function generatePage(items) {
             </aside>
             <main>
                 <h2 class="page-title">What's On My Radar</h2>
-                <p class="last-updated">Updated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                <p class="last-updated">Updated <time id="build-time" datetime="${new Date().toISOString()}"></time></p>
                 <div class="filter-bar">
                     <button class="filter-btn active" data-filter="all">All</button>
                     <button class="filter-btn" data-filter="article">Articles</button>
@@ -414,6 +414,15 @@ function generatePage(items) {
         };
         document.body.appendChild(s);
     })();
+    </script>
+    <script>
+        (function() {
+            var el = document.getElementById('build-time');
+            if (el) {
+                var d = new Date(el.getAttribute('datetime'));
+                el.textContent = d.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+            }
+        })();
     </script>
 </body>
 </html>`;
