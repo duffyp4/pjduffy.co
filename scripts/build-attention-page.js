@@ -438,7 +438,7 @@ async function main() {
   console.log('Fetching articles from Kindle worker...');
   let articles = [];
   try {
-    articles = await fetchArticles();
+    articles = (await fetchArticles()).filter(a => /^https?:\/\//.test(a.url));
     console.log('  ' + articles.length + ' articles');
   } catch (err) {
     console.warn('  Worker unavailable after all retries, continuing without articles:', err.message);
