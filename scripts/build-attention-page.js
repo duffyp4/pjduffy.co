@@ -254,6 +254,7 @@ function generatePage(items) {
         .page-info { color: #444; }
         .tweet-loading { min-height: 100px; border: 1px solid #e1e8ed; border-radius: 12px; padding: 16px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; color: #536471; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; animation: pulse 1.5s ease-in-out infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .last-updated { font-size: 12px; color: #888; margin: 4px 15px 0; font-family: 'Apple Garamond', Georgia, serif; }
     </style>
 </head>
 <body>
@@ -277,6 +278,7 @@ function generatePage(items) {
             </aside>
             <main>
                 <h2 class="page-title">What's On My Radar</h2>
+                <p class="last-updated">Updated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
                 <div class="filter-bar">
                     <button class="filter-btn active" data-filter="all">All</button>
                     <button class="filter-btn" data-filter="article">Articles</button>
