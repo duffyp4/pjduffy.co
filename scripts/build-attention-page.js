@@ -111,18 +111,32 @@ async function fetchXBookmarks() {
   }));
 }
 
-async function fetchArticles() {
-  const res = await fetch(`${KINDLE_WORKER_URL}/articles`);
-  if (!res.ok) throw new Error(`Worker articles error: ${res.status}`);
-  const data = await res.json();
-  return (data.articles || []).map(a => ({
-    type: 'article',
-    date: a.date || '',
-    url: a.url || '',
-    title: a.title || '',
-    author: a.author || '',
-    siteName: a.siteName || '',
-  }));
+async function fetchArticles({ retries = 3, timeoutMs = 10000, retryDelayMs = 5000 } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`${KINDLE_WORKER_URL}/articles`, {
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!res.ok) throw new Error(`Worker articles error: ${res.status}`);
+      const data = await res.json();
+      return (data.articles || []).map(a => ({
+        type: 'article',
+        date: a.date || '',
+        url: a.url || '',
+        title: a.title || '',
+        author: a.author || '',
+        siteName: a.siteName || '',
+      }));
+    } catch (err) {
+      lastError = err;
+      if (attempt < retries) {
+        console.warn(`  Attempt ${attempt} failed (${err.message}), retrying in ${retryDelayMs / 1000}s...`);
+        await new Promise(r => setTimeout(r, retryDelayMs));
+      }
+    }
+  }
+  throw lastError;
 }
 
 // --- Archive URL resolution ---
@@ -411,8 +425,13 @@ async function main() {
   console.log('  ' + bookmarks.length + ' bookmarks');
 
   console.log('Fetching articles from Kindle worker...');
-  const articles = await fetchArticles();
-  console.log('  ' + articles.length + ' articles');
+  let articles = [];
+  try {
+    articles = await fetchArticles();
+    console.log('  ' + articles.length + ' articles');
+  } catch (err) {
+    console.warn('  Worker unavailable after all retries, continuing without articles:', err.message);
+  }
 
   console.log('Syncing articles to Google Sheet...');
   await syncArticlesToSheet(articles);
