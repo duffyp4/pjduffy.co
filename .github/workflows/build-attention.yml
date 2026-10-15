@@ -13,11 +13,22 @@ on:
 permissions:
   contents: write
 
+# One build at a time. A burst of dispatches (e.g. saving several articles in a row)
+# collapses into the running build plus the newest pending one, instead of parallel
+# runs that race each other to push radar.html.
+concurrency:
+  group: build-attention-page
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Check out the branch tip at run start, not the SHA captured when the event
+          # fired -- a queued run would otherwise build on a stale commit and fail to push.
+          ref: ${{ github.event.repository.default_branch }}
 
       - uses: actions/setup-node@v4
         with:
